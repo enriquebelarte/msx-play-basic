@@ -1,0 +1,15 @@
+# Compiled binaries and object files
+msx_play
+*.o
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary audio files
+*.wav
+
+# AI assistant project memories
+AGENTS.md
+GEMINI.md
