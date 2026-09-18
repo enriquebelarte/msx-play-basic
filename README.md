@@ -141,7 +141,7 @@ sudo make install PREFIX=/usr/local
 
 ## Song Library (`songs/`)
 
-The `songs/` directory stores ready-to-play music files using the `.mus` format.
+The `songs/` directory stores ready-to-play music files using the `.mus` format. A collection of sample songs can be found directly in the `songs/` directory.
 
 ### Supported `.mus` File Formats
 
@@ -169,11 +169,63 @@ You can also write standard MSX BASIC `PLAY` statements directly:
 PLAY "T120 O5 C D E", "O4 E G > C", "O3 C G > C"
 ```
 
-### Included Songs
-
-- **[`songs/jump.mus`](file:///home/enrique/Proyectos/msx-play-sound/songs/jump.mus)**: The iconic synthesizer intro of Van Halen's *"Jump"*, polyphonically voiced across all 3 PSG channels with syncopated chords and sustained legato ties.
-
 ---
+
+## MIDI to MSX Converter & Search Tool (`midi2mus.py`)
+
+A standalone, pure Python tool (no external pip dependencies needed) to search for MIDI songs online, download them, and automatically convert them into 3-channel MSX `.mus` MML files.
+
+### Key Capabilities
+- **Online Search & Download**: Searches BitMidi directly for song titles, presents interactive results, downloads the selected file, and parses it.
+- **Universal Input**: Accepts interactive prompts, search terms, direct URLs (`http://.../song.mid`), or existing local `.mid` files.
+- **Smart 3-Channel Separation**:
+  - Automatically identifies lead melodies, harmonies, and basslines by pitch range and track characteristics.
+  - Slices single-track or polyphonic MIDI files into 3 monophonic voices suitable for the AY-3-8910 PSG.
+- **MSX Quantization & Rests**: Quantizes notes to a 16th-note grid, computes accurate note lengths, rests, and octave transitions.
+- **Direct Playback**: Can immediately trigger `./msx_play` to listen to the converted song.
+
+### Usage
+
+```bash
+python3 midi2mus.py [query|url|file.mid] [options]
+```
+
+#### Command-Line Options
+
+| Option | Description |
+| :--- | :--- |
+| `query` | Song title to search online, direct URL to `.mid`, or local `.mid` file path. If omitted, prompts interactively. |
+| `-s`, `--search <query>` | Explicit online search query. |
+| `-o`, `--output <file.mus>` | Output `.mus` destination (default: `songs/<song_name>.mus`). |
+| `-p`, `--play` | Immediately plays the converted song with `./msx_play`. |
+| `-y`, `--yes` | Automatically select the first search result without interactive prompt. |
+| `--select <N>`, `--pick <N>` | Select search result number `N` directly (e.g. `--select 2`). |
+| `-t`, `--tempo <bpm|factor>` | Override tempo (e.g. `-t 85`) or scale it (e.g. `-t 0.75x`, `-t 0.5x`). |
+| `--tracks <t1,t2,t3>` | Manually specify MIDI track/part indices to map to Channel 1, 2, and 3 (supports merging parts with `+`, e.g. `--tracks 8+3+5,1,2`). |
+| `--list-tracks` | Inspect and display all tracks/instrument parts, note counts, tags (BASS, LEAD, DRUMS), and pitch ranges. |
+
+#### Examples
+
+1. **Interactive Search and Convert:**
+   ```bash
+   python3 midi2mus.py "Super Mario Bros"
+   ```
+
+2. **Search, Convert, and Play Immediately:**
+   ```bash
+   python3 midi2mus.py "Tetris" -y -p
+   ```
+
+3. **Convert Local MIDI File:**
+   ```bash
+   python3 midi2mus.py my_song.mid -o songs/my_song.mus
+   ```
+
+4. **Inspect MIDI Tracks & Manually Route Channels:**
+   ```bash
+   python3 midi2mus.py song.mid --list-tracks
+   python3 midi2mus.py song.mid --tracks 2,3,1 -p
+   ```
 
 ## Interactive REPL
 

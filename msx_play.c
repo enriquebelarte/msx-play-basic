@@ -746,16 +746,22 @@ void print_help(const char *prog) {
     printf("  %s --beep\n", prog);
 }
 
+#define MAX_CHANNEL_CHARS 65536
+
 // Load channels from a .mus or text file
-int load_mus_file(const char *filename, char storage[3][1024], const char *channel_ptrs[3]) {
+int load_mus_file(const char *filename, char storage[3][MAX_CHANNEL_CHARS], const char *channel_ptrs[3]) {
     FILE *f = fopen(filename, "r");
     if (!f) return 0;
 
-    int count = 0;
-    char line[1024];
+    for (int c = 0; c < 3; c++) storage[c][0] = '\0';
 
-    while (fgets(line, sizeof(line), f) && count < 3) {
-        size_t slen = strlen(line);
+    int count = 0;
+    char *line = NULL;
+    size_t line_cap = 0;
+    ssize_t nread;
+
+    while ((nread = getline(&line, &line_cap, f)) != -1) {
+        size_t slen = (size_t)nread;
         while (slen > 0 && (line[slen - 1] == '\n' || line[slen - 1] == '\r')) {
             line[--slen] = '\0';
         }
@@ -764,34 +770,67 @@ int load_mus_file(const char *filename, char storage[3][1024], const char *chann
         while (isspace(*p)) p++;
         if (*p == '\0' || *p == '#' || *p == ';') continue;
 
+        // Check for PLAY command
         if (strncasecmp(p, "PLAY", 4) == 0 && (isspace(p[4]) || p[4] == '"' || p[4] == '\0')) {
             p += 4;
-            while (*p != '\0' && count < 3) {
+            int ch_idx = 0;
+            while (*p != '\0' && ch_idx < 3) {
                 while (isspace(*p) || *p == ',') p++;
                 if (*p == '\0') break;
                 if (*p == '"') {
                     p++;
                     int idx = 0;
-                    while (*p != '\0' && *p != '"' && idx < 1023) storage[count][idx++] = *p++;
-                    storage[count][idx] = '\0';
+                    while (*p != '\0' && *p != '"' && idx < MAX_CHANNEL_CHARS - 1) storage[ch_idx][idx++] = *p++;
+                    storage[ch_idx][idx] = '\0';
                     if (*p == '"') p++;
                 } else {
                     int idx = 0;
-                    while (*p != '\0' && *p != ',' && idx < 1023) storage[count][idx++] = *p++;
-                    storage[count][idx] = '\0';
+                    while (*p != '\0' && *p != ',' && idx < MAX_CHANNEL_CHARS - 1) storage[ch_idx][idx++] = *p++;
+                    storage[ch_idx][idx] = '\0';
                 }
-                channel_ptrs[count] = storage[count];
-                count++;
+                channel_ptrs[ch_idx] = storage[ch_idx];
+                ch_idx++;
             }
+            count = ch_idx;
             break;
         }
 
-        snprintf(storage[count], sizeof(storage[count]), "%s", p);
-        channel_ptrs[count] = storage[count];
-        count++;
+        // Check for explicit channel prefix: CH1:, CH2:, CH3:, CHANNEL 1:, etc.
+        int target_ch = -1;
+        if (strncasecmp(p, "CH1:", 4) == 0 || strncasecmp(p, "CH 1:", 5) == 0) {
+            target_ch = 0;
+            p = strchr(p, ':') + 1;
+        } else if (strncasecmp(p, "CH2:", 4) == 0 || strncasecmp(p, "CH 2:", 5) == 0) {
+            target_ch = 1;
+            p = strchr(p, ':') + 1;
+        } else if (strncasecmp(p, "CH3:", 4) == 0 || strncasecmp(p, "CH 3:", 5) == 0) {
+            target_ch = 2;
+            p = strchr(p, ':') + 1;
+        }
+
+        if (target_ch >= 0) {
+            while (isspace(*p)) p++;
+            size_t cur_len = strlen(storage[target_ch]);
+            if (cur_len > 0 && cur_len < MAX_CHANNEL_CHARS - 2) {
+                strncat(storage[target_ch], " ", MAX_CHANNEL_CHARS - cur_len - 1);
+            }
+            strncat(storage[target_ch], p, MAX_CHANNEL_CHARS - strlen(storage[target_ch]) - 1);
+            if (target_ch + 1 > count) count = target_ch + 1;
+            channel_ptrs[target_ch] = storage[target_ch];
+        } else {
+            if (count < 3) {
+                snprintf(storage[count], MAX_CHANNEL_CHARS, "%s", p);
+                channel_ptrs[count] = storage[count];
+                count++;
+            }
+        }
     }
 
+    if (line) free(line);
     fclose(f);
+    for (int i = 0; i < count; i++) {
+        channel_ptrs[i] = storage[i];
+    }
     return count;
 }
 
@@ -804,7 +843,7 @@ int main(int argc, char *argv[]) {
     int interactive = 0;
     int clean = 0;
 
-    char file_storage[3][1024];
+    static char file_storage[3][MAX_CHANNEL_CHARS];
     const char *channel_args[3];
     int num_channels = 0;
 
