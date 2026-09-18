@@ -1,0 +1,12 @@
+# Van Halen - Jump (Synthesizer Intro)
+# 4/4 Time Signature, Key of C Major
+# Emulated for MSX PSG (AY-3-8910, 3 Channels)
+
+# Channel 1: Top Voice (Oberheim OB-Xa Lead)
+T120 V15 O5 R4 D8 R4 E8 R4 C8 R4 C8 R8 D8 R8 D4. E8 R4 C8 R8 O4 A4 G4 G8 ML G2
+
+# Channel 2: Middle Voice
+T120 V13 O4 R4 B8 R4 O5 C8 R4 O4 A8 R4 A8 R8 B8 R8 B4. O5 C8 R4 O4 A8 R8 F4 E4 D8 ML D2
+
+# Channel 3: Bottom Voice
+T120 V12 O4 R4 G8 R4 G8 R4 F8 R4 F8 R8 G8 R8 G4. G8 R4 F8 R8 C4 C4 C8 ML C2
